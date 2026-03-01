@@ -1,0 +1,45 @@
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 虚拟环境
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 数据集和大视频文件 (避免上传太大的文件)
+input_video/*.mp4
+input_video/*.avi
+standard_action/*.mp4
+*.mp4
+*.avi
+
+# 模型文件 (如果太大也可以忽略，让别人自己下载)
+*.pt
+*.pth
