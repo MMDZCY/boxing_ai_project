@@ -1,4 +1,4 @@
-# 文件路径: d:\boxing_ai_project\code\realtime_boxing_ai_with_lstm.py
+
 import cv2
 import numpy as np
 from ultralytics import YOLO
@@ -10,6 +10,8 @@ import pyttsx3
 import os
 import joblib
 import tensorflow as tf
+from error_pattern_analyzer import ErrorPatternAnalyzer
+from enhanced_action_evaluator import EnhancedActionEvaluator
 
 # -------------------------- 全局配置 --------------------------
 CAMERA_ID = 0
@@ -18,13 +20,26 @@ FRAME_HEIGHT = 720
 MODEL = YOLO('yolov8n-pose.pt')
 CONF_THRESHOLD = 0.5
 
-# 标准动作路径
-STANDARD_ACTION_PATH = "../standard_action/standard_straight.npy"
+# 标准动作路径配置
+STANDARD_ACTION_PATHS = {
+    0: r"D:\boxing_ai_project\standard_action\standard_jab.npy",
+    1: r"D:\boxing_ai_project\standard_action\standard_straight.npy",
+    2: r"D:\boxing_ai_project\standard_action\standard_hook.npy",
+    3: r"D:\boxing_ai_project\standard_action\standard_swing.npy"
+}
+
+# 为不同动作设置不同颜色
+ACTION_COLORS = {
+    0: (255, 100, 100),
+    1: (100, 255, 100),
+    2: (100, 100, 255),
+    3: (255, 200, 50)
+}
 
 # LSTM模型配置
-LSTM_MODEL_PATH = "../model/lstm_action_classifier.h5"
-LSTM_SCALER_PATH = "../model/lstm_scaler.pkl"
-LSTM_WINDOW_SIZE = 10  # LSTM时序窗口大小
+LSTM_MODEL_PATH = r"D:\boxing_ai_project\model\lstm_action_classifier.h5"
+LSTM_SCALER_PATH = r"D:\boxing_ai_project\model\lstm_scaler.pkl"
+LSTM_WINDOW_SIZE = 10
 ACTION_NAMES = {0: "刺拳(Jab)", 1: "直拳(Straight)", 2: "勾拳(Hook)", 3: "摆拳(Swing)"}
 
 # 检测与匹配配置
@@ -45,13 +60,14 @@ SKELETON = [
     (5,11), (6,12), (11,12), (11,13), (13,15), (12,14), (14,16)
 ]
 
-# 颜色定义 (BGR格式，OpenCV专用)
-COLOR_USER = (0, 0, 255)       # 用户骨骼：实色红
-COLOR_STD = (0, 255, 0)        # 标准骨骼：半透绿
+# 颜色定义
+COLOR_USER = (0, 0, 255)
+COLOR_STD = (0, 255, 0)
 COLOR_WARN = (0, 230, 255)
 COLOR_WHITE = (255,255,255)
 COLOR_BLACK = (0,0,0)
-COLOR_LSTM = (255, 165, 0)     # LSTM分类结果：橙色
+COLOR_LSTM = (255, 165, 0)
+COLOR_ERROR = (255, 100, 100)
 
 # 配置Matplotlib中文显示
 plt.rcParams["font.family"] = ["SimHei", "Microsoft YaHei", "DejaVu Sans"]
@@ -59,14 +75,12 @@ plt.rcParams["axes.unicode_minus"] = False
 
 # -------------------------- 工具函数 --------------------------
 def calculate_angle(p1, p2, p3):
-    """和之前完全一致的角度计算，保证逻辑统一"""
     v1 = p1[:2] - p2[:2]
     v2 = p3[:2] - p2[:2]
     cos_angle = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2) + 1e-6)
     return np.degrees(np.arccos(np.clip(cos_angle, -1.0, 1.0)))
 
 def put_chinese_text(img, text, position, font_size=24, color=COLOR_WHITE):
-    """解决中文显示问题"""
     if isinstance(img, np.ndarray):
         img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(img)
@@ -77,15 +91,7 @@ def put_chinese_text(img, text, position, font_size=24, color=COLOR_WHITE):
     draw.text(position, text, font=font, fill=color)
     return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
-def calculate_punch_score(elbow_angle, hip_twist_angle):
-    """和之前完全一致的打分逻辑，保证结果统一"""
-    elbow_score = min(elbow_angle / 170 * 40, 40)
-    twist_score = min(hip_twist_angle / 30 * 40, 40)
-    total_score = elbow_score + twist_score
-    return total_score, elbow_score, twist_score
-
 def generate_history_plot(score_history):
-    """历史得分趋势图，和之前完全一致"""
     fig, ax = plt.subplots(figsize=(4, 3), dpi=100)
     if not score_history:
         ax.text(0.5, 0.5, "暂无记录，快出拳吧！", ha='center', va='center', fontsize=12, transform=ax.transAxes)
@@ -114,10 +120,9 @@ def generate_history_plot(score_history):
 
 # -------------------------- LSTM相关函数 --------------------------
 def load_lstm_model():
-    """加载LSTM模型和标准化器"""
     print("[初始化] 正在加载LSTM模型...")
     if not os.path.exists(LSTM_MODEL_PATH) or not os.path.exists(LSTM_SCALER_PATH):
-        raise FileNotFoundError("找不到LSTM模型文件，请先运行 train_lstm_classifier.py")
+        raise FileNotFoundError("找不到LSTM模型文件")
     
     lstm_model = tf.keras.models.load_model(LSTM_MODEL_PATH)
     lstm_scaler = joblib.load(LSTM_SCALER_PATH)
@@ -125,38 +130,44 @@ def load_lstm_model():
     return lstm_model, lstm_scaler
 
 def preprocess_keypoints_for_lstm(kp):
-    """预处理单帧关键点，只保留x,y坐标"""
     return kp[:, :2].copy()
 
 def predict_action_with_lstm(lstm_model, lstm_scaler, kp_buffer):
-    """使用LSTM模型预测动作"""
     if len(kp_buffer) < LSTM_WINDOW_SIZE:
         return None, 0.0
     
-    # 准备时序数据：(10, 17, 2)
     kp_seq = np.array(kp_buffer)
-    
-    # 展平为340维特征
     features = kp_seq.flatten().reshape(1, -1)
-    
-    # 重塑为 (1, 10, 34) 用于标准化
     features_reshaped = features.reshape(1, 10, 34)
     features_flat = features_reshaped.reshape(-1, 34)
-    
-    # 标准化
     features_scaled_flat = lstm_scaler.transform(features_flat)
     features_scaled = features_scaled_flat.reshape(1, 10, 34)
     
-    # 预测
     predictions = lstm_model.predict(features_scaled, verbose=0)
     predicted_class = np.argmax(predictions[0])
     confidence = predictions[0][predicted_class]
     
     return predicted_class, confidence
 
-# -------------------------- 骨骼叠加核心优化函数 --------------------------
+def load_all_standard_actions():
+    print("[初始化] 正在加载所有标准动作模板...")
+    standard_data = {}
+    for action_type, path in STANDARD_ACTION_PATHS.items():
+        if os.path.exists(path):
+            std_kp_seq = np.load(path)
+            std_features = preprocess_standard_action(std_kp_seq)
+            standard_data[action_type] = {
+                'kp_seq': std_kp_seq,
+                'features': std_features,
+                'name': ACTION_NAMES[action_type]
+            }
+            print(f"   ✅ 加载 {ACTION_NAMES[action_type]}: {len(std_kp_seq)} 帧")
+        else:
+            print(f"   ⚠️  未找到 {ACTION_NAMES[action_type]} 模板")
+    return standard_data
+
+# -------------------------- 骨骼叠加函数 --------------------------
 def extract_action_features(kp):
-    """多特征提取，解决单特征匹配不准的问题"""
     elbow_angle = calculate_angle(kp[5], kp[7], kp[9])
     shoulder_vec = kp[6][:2] - kp[5][:2]
     hip_vec = kp[12][:2] - kp[11][:2]
@@ -165,14 +176,12 @@ def extract_action_features(kp):
     return np.array([elbow_angle, twist_angle, wrist_height])
 
 def preprocess_standard_action(std_kp_seq):
-    """预计算标准动作的所有特征"""
     std_features = []
     for kp in std_kp_seq:
         std_features.append(extract_action_features(kp))
     return np.array(std_features)
 
 def find_smooth_matching_frame(user_feat, std_features, last_idx, smooth_window=5):
-    """平滑匹配：解决跳帧抖动问题"""
     min_search = max(0, last_idx - smooth_window)
     max_search = min(len(std_features)-1, last_idx + smooth_window)
     weights = np.array([0.6, 0.3, 0.1])
@@ -186,12 +195,9 @@ def find_smooth_matching_frame(user_feat, std_features, last_idx, smooth_window=
     return best_idx
 
 def align_std_to_user_body(std_kp, user_kp):
-    """把标准骨骼对齐到用户的实际身体位置"""
     std_kp_aligned = std_kp.copy()
-    
     user_hip_center = (user_kp[11][:2] + user_kp[12][:2]) / 2
     user_shoulder_width = np.linalg.norm(user_kp[5][:2] - user_kp[6][:2])
-    
     std_hip_center = (std_kp[11][:2] + std_kp[12][:2]) / 2
     std_shoulder_width = np.linalg.norm(std_kp[5][:2] - std_kp[6][:2])
     
@@ -201,11 +207,9 @@ def align_std_to_user_body(std_kp, user_kp):
         std_hip_center *= scale
     
     std_kp_aligned[:, :2] += (user_hip_center - std_hip_center)
-    
     return std_kp_aligned
 
 def draw_skeleton_overlay(img, kp, color, alpha=1.0, thickness=3):
-    """优化的骨骼绘制，支持半透明"""
     overlay = img.copy()
     for (i, j) in SKELETON:
         pt1 = (int(kp[i][0]), int(kp[i][1]))
@@ -224,26 +228,31 @@ def draw_skeleton_overlay(img, kp, color, alpha=1.0, thickness=3):
 
 # -------------------------- 主程序 --------------------------
 def main():
-    # 1. 初始化所有模块
     print("[初始化] 正在启动语音引擎...")
     tts_engine = pyttsx3.init()
     tts_engine.setProperty('rate', 180)
     
+    # 初始化分析器
+    error_analyzer = ErrorPatternAnalyzer(max_history=200)
+    enhanced_evaluator = EnhancedActionEvaluator()
+    
     # 加载LSTM模型
     lstm_model, lstm_scaler = load_lstm_model()
-    kp_buffer = deque(maxlen=LSTM_WINDOW_SIZE)  # LSTM关键点缓冲区
+    kp_buffer = deque(maxlen=LSTM_WINDOW_SIZE)
+    full_kp_buffer = deque(maxlen=30)  # 保存更多帧用于评估
     current_action = "等待检测..."
     current_confidence = 0.0
+    current_action_type = 0
     
-    # 标准动作预加载与预处理
-    print("[初始化] 正在加载并预处理标准动作...")
-    if not os.path.exists(STANDARD_ACTION_PATH):
-        raise FileNotFoundError(f"找不到标准动作文件：{STANDARD_ACTION_PATH}")
-    std_kp_seq = np.load(STANDARD_ACTION_PATH)
-    std_features = preprocess_standard_action(std_kp_seq)
+    # 加载所有标准动作模板
+    standard_actions = load_all_standard_actions()
+    if not standard_actions:
+        raise FileNotFoundError("没有找到任何标准动作模板！")
+    
+    current_std_data = standard_actions.get(1, list(standard_actions.values())[0])
     last_match_idx = 0
-    print(f"✅ 标准动作预处理完成：共 {len(std_kp_seq)} 帧")
-
+    action_switch_cooldown = 0
+    
     # 摄像头初始化
     cap = cv2.VideoCapture(CAMERA_ID)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
@@ -253,26 +262,25 @@ def main():
         print("❌ 无法打开摄像头")
         return
 
-    # 状态变量初始化
+    # 状态变量
     wrist_history = deque(maxlen=WINDOW_SIZE)
     cooldown_counter = 0
     last_score = None
-    last_suggestion = ""
-    last_suggestion_speak = ""
+    last_eval_result = None
     punch_highlight_frame = 0
     score_history = []
     history_plot_img = generate_history_plot(score_history)
     skeleton_overlay_enabled = True
+    show_error_alert = True
 
     print("="*60)
-    print("🥊  拳击动作AI训练系统 (LSTM集成版)")
+    print("🥊  拳击动作AI训练系统 (增强评估版)")
     print("="*60)
     print("📌 功能清单：")
-    print("   ✅ 实时姿态检测 | ✅ 自动出拳识别 | ✅ 专项动作打分")
-    print("   ✅ LSTM动作分类 | ✅ 语音播报反馈 | ✅ 训练趋势记录")
-    print("   ✅ 实时骨骼叠加")
+    print("   ✅ 实时姿态检测 | ✅ 自动出拳识别 | ✅ 多维度评估")
+    print("   ✅ LSTM动作分类 | ✅ 多模板自动切换 | ✅ 错误模式识别")
     print("📌 操作说明：")
-    print("   【Tab键】开启/关闭骨骼叠加 | 【Q键】退出程序")
+    print("   【Tab键】骨骼叠加 | 【E键】错误提醒 | 【R键】生成报告 | 【Q键】退出")
     print("="*60)
 
     while True:
@@ -281,50 +289,58 @@ def main():
         frame = cv2.flip(frame, 1)
         display_frame = frame.copy()
 
-        # 2. YOLO实时姿态检测
         results = MODEL(frame, conf=CONF_THRESHOLD, verbose=False)
         keypoints = results[0].keypoints.data
         user_kp = None
         current_elbow = 0
         current_twist = 0
+        current_wrist_height = 0
 
         if keypoints.shape[0] > 0:
             user_kp = keypoints[0].cpu().numpy()
-            
-            # 预处理关键点并加入LSTM缓冲区
             processed_kp = preprocess_keypoints_for_lstm(user_kp)
             kp_buffer.append(processed_kp)
+            full_kp_buffer.append(user_kp)
             
-            # 使用LSTM进行动作分类
             if len(kp_buffer) == LSTM_WINDOW_SIZE:
                 pred_class, conf = predict_action_with_lstm(lstm_model, lstm_scaler, kp_buffer)
                 if pred_class is not None:
                     current_action = ACTION_NAMES[pred_class]
                     current_confidence = conf
+                    current_action_type = pred_class
+                    
+                    if action_switch_cooldown == 0 and conf > 0.7 and pred_class in standard_actions:
+                        if current_std_data['name'] != standard_actions[pred_class]['name']:
+                            current_std_data = standard_actions[pred_class]
+                            last_match_idx = 0
+                            action_switch_cooldown = 30
+                            print(f"🔄 切换标准模板: {current_std_data['name']}")
             
-            # 计算核心指标
+            if action_switch_cooldown > 0:
+                action_switch_cooldown -= 1
+            
             current_elbow = calculate_angle(user_kp[5], user_kp[7], user_kp[9])
             left_shoulder, right_shoulder = user_kp[5], user_kp[6]
             left_hip, right_hip = user_kp[11], user_kp[12]
             shoulder_vec = right_shoulder[:2] - left_shoulder[:2]
             hip_vec = right_hip[:2] - left_hip[:2]
             current_twist = calculate_angle(np.array([0,0]), shoulder_vec, hip_vec)
+            current_wrist_height = (user_kp[9][1] - user_kp[5][1]) / (np.linalg.norm(user_kp[5]-user_kp[6]) + 1e-6)
 
-            # 骨骼叠加逻辑
             if skeleton_overlay_enabled:
                 user_feat = extract_action_features(user_kp)
-                best_match_idx = find_smooth_matching_frame(user_feat, std_features, last_match_idx, MATCH_SMOOTH_WINDOW)
+                best_match_idx = find_smooth_matching_frame(user_feat, current_std_data['features'], last_match_idx, MATCH_SMOOTH_WINDOW)
                 last_match_idx = best_match_idx
-                matched_std_kp = std_kp_seq[best_match_idx]
+                matched_std_kp = current_std_data['kp_seq'][best_match_idx]
                 std_kp_aligned = align_std_to_user_body(matched_std_kp, user_kp)
-                display_frame = draw_skeleton_overlay(display_frame, std_kp_aligned, COLOR_STD, alpha=0.4, thickness=4)
+                std_color = ACTION_COLORS.get(current_action_type, COLOR_STD)
+                display_frame = draw_skeleton_overlay(display_frame, std_kp_aligned, std_color, alpha=0.4, thickness=4)
                 display_frame = draw_skeleton_overlay(display_frame, user_kp, COLOR_USER, alpha=1.0, thickness=2)
-                match_info = f"匹配标准帧：{best_match_idx} | 骨骼叠加：开启"
+                match_info = f"匹配: {current_std_data['name']} | 帧:{best_match_idx} | 叠加: 开启"
             else:
                 match_info = "骨骼叠加：关闭"
                 display_frame = draw_skeleton_overlay(display_frame, user_kp, COLOR_USER, alpha=1.0, thickness=2)
 
-            # 自动出拳检测逻辑
             current_wrist = user_kp[9]
             wrist_history.append(current_wrist)
             if cooldown_counter > 0:
@@ -337,21 +353,44 @@ def main():
                     if movement_dist > PUNCH_SPEED_THRESHOLD and current_elbow > 100:
                         cooldown_counter = COOLDOWN_FRAMES
                         punch_highlight_frame = 15
-                        total, _, _ = calculate_punch_score(current_elbow, current_twist)
-                        last_score = total
-                        score_history.append(total)
+                        
+                        # 使用增强版评估器
+                        punch_data = {
+                            'action_type': current_action_type,
+                            'elbow_angle': current_elbow,
+                            'hip_twist': current_twist
+                        }
+                        
+                        # 多维度评估
+                        total_score, eval_result = enhanced_evaluator.evaluate_punch(
+                            punch_data, list(full_kp_buffer), current_std_data['kp_seq']
+                        )
+                        
+                        last_score = total_score
+                        last_eval_result = eval_result
+                        score_history.append(total_score)
                         if len(score_history) > MAX_HISTORY_LENGTH:
                             score_history.pop(0)
                         history_plot_img = generate_history_plot(score_history)
                         
-                        # 生成建议（包含LSTM识别的动作）
+                        # 同时记录到错误分析器
+                        error_analyzer.record_punch({
+                            'action_type': current_action_type,
+                            'elbow_angle': current_elbow,
+                            'hip_twist': current_twist,
+                            'wrist_height': current_wrist_height,
+                            'score': total_score
+                        })
+                        
+                        # 生成建议
                         suggs_text, suggs_speak = [], []
-                        if current_elbow < 150:
+                        dims = eval_result['dimensions']
+                        if dims['elbow_angle']['score'] < 70:
                             suggs_text.append("❌ 出拳未完全伸直")
                             suggs_speak.append("出拳未完全伸直")
                         else:
                             suggs_text.append("✅ 出拳伸直")
-                        if current_twist < 20:
+                        if dims['hip_twist']['score'] < 70:
                             suggs_text.append("❌ 转髋幅度不足")
                             suggs_speak.append("转髋幅度不足")
                         else:
@@ -362,51 +401,72 @@ def main():
                         last_suggestion = " | ".join(suggs_text)
                         last_suggestion_speak = "。".join(suggs_speak)
                         
-                        # 打印LSTM识别的动作
-                        print(f"🎯 第{len(score_history)}拳 | LSTM识别：{current_action} (置信度:{current_confidence:.1%}) | 得分：{total:.1f}/80 | {last_suggestion}")
-                        speak_content = f"第{len(score_history)}拳，{current_action}，得分{int(total)}分。{last_suggestion_speak}"
+                        print(f"🎯 第{len(score_history)}拳 | {current_action} | 多维度得分: {total_score:.1f}/100 | {last_suggestion}")
+                        print(f"   各维度: 肘:{dims['elbow_angle']['score']:.0f} 髋:{dims['hip_twist']['score']:.0f} "
+                              f"DTW:{dims['dtw_distance']['score']:.0f} 速度:{dims['speed_match']['score']:.0f} "
+                              f"重心:{dims['center_of_mass']['score']:.0f}")
+                        
+                        speak_content = f"第{len(score_history)}拳，{current_action}，得分{int(total_score)}分。{last_suggestion_speak}"
                         tts_engine.say(speak_content)
                         tts_engine.runAndWait()
 
-        # 3. UI界面叠加
-        # --- 左上角实时指标面板（增加LSTM分类结果）---
-        cv2.rectangle(display_frame, (10, 10), (420, 250), COLOR_BLACK, -1)
-        cv2.rectangle(display_frame, (10, 10), (420, 250), COLOR_WHITE, 2)
+        # UI界面
+        cv2.rectangle(display_frame, (10, 10), (420, 320), COLOR_BLACK, -1)
+        cv2.rectangle(display_frame, (10, 10), (420, 320), COLOR_WHITE, 2)
         status_text = "状态：等待出拳..." if cooldown_counter == 0 else "状态：冷却中..."
         status_color = COLOR_WHITE if cooldown_counter == 0 else COLOR_WARN
+        
+        action_color = ACTION_COLORS.get(current_action_type, COLOR_LSTM)
         display_frame = put_chinese_text(display_frame, "🥊 实时动作指标", (20, 15), font_size=20)
-        display_frame = put_chinese_text(display_frame, f"🤖 LSTM动作：{current_action}", (20, 50), font_size=18, color=COLOR_LSTM)
-        display_frame = put_chinese_text(display_frame, f"   置信度：{current_confidence:.1%}", (20, 80), font_size=14, color=COLOR_LSTM)
-        display_frame = put_chinese_text(display_frame, f"右肘关节角度：{current_elbow:.1f}°", (20, 110), font_size=18)
-        display_frame = put_chinese_text(display_frame, f"肩髋扭转角度：{current_twist:.1f}°", (20, 145), font_size=18)
-        display_frame = put_chinese_text(display_frame, status_text, (20, 180), font_size=16, color=status_color)
+        display_frame = put_chinese_text(display_frame, f"🤖 LSTM动作：{current_action}", (20, 50), font_size=18, color=action_color)
+        display_frame = put_chinese_text(display_frame, f"   置信度：{current_confidence:.1%}", (20, 80), font_size=14, color=action_color)
+        display_frame = put_chinese_text(display_frame, f"📋 标准模板：{current_std_data['name']}", (20, 110), font_size=14, color=action_color)
+        display_frame = put_chinese_text(display_frame, f"右肘关节角度：{current_elbow:.1f}°", (20, 140), font_size=18)
+        display_frame = put_chinese_text(display_frame, f"肩髋扭转角度：{current_twist:.1f}°", (20, 175), font_size=18)
+        display_frame = put_chinese_text(display_frame, status_text, (20, 210), font_size=16, color=status_color)
+        
+        if show_error_alert and len(error_analyzer.punch_history) >= 5:
+            analysis = error_analyzer.analyze_errors()
+            if analysis and analysis['top_error']:
+                error_key, error_info = analysis['top_error']
+                if error_info['error_rate'] > 0.5:
+                    display_frame = put_chinese_text(display_frame, 
+                        f"⚠️  常见错误：{error_info['name']} ({error_info['error_rate']*100:.0f}%)", 
+                        (20, 245), font_size=14, color=COLOR_ERROR)
+        
         if 'match_info' in locals():
-            display_frame = put_chinese_text(display_frame, match_info, (20, 215), font_size=14, color=COLOR_STD if skeleton_overlay_enabled else COLOR_WHITE)
+            display_frame = put_chinese_text(display_frame, match_info, (20, 280), font_size=14, 
+                color=COLOR_STD if skeleton_overlay_enabled else COLOR_WHITE)
 
-        # --- 右上角历史趋势图 ---
         h_plot, w_plot = history_plot_img.shape[:2]
         x_offset = FRAME_WIDTH - w_plot - 20
         y_offset = 20
         display_frame[y_offset:y_offset+h_plot, x_offset:x_offset+w_plot] = history_plot_img
 
-        # --- 出拳高亮特效 ---
         if punch_highlight_frame > 0:
             punch_highlight_frame -= 1
             cv2.circle(display_frame, (FRAME_WIDTH//2, FRAME_HEIGHT//2), 200, (155, 89, 182), 10)
             cv2.putText(display_frame, "PUNCH!", (FRAME_WIDTH//2 - 100, FRAME_HEIGHT//2 + 20),
                         cv2.FONT_HERSHEY_SIMPLEX, 3, (155, 89, 182), 5, cv2.LINE_AA)
 
-        # --- 右下角最近一次打分 ---
-        if last_score is not None:
-            cv2.rectangle(display_frame, (FRAME_WIDTH-420, FRAME_HEIGHT-200), (FRAME_WIDTH-20, FRAME_HEIGHT-20), COLOR_BLACK, -1)
-            cv2.rectangle(display_frame, (FRAME_WIDTH-420, FRAME_HEIGHT-200), (FRAME_WIDTH-20, FRAME_HEIGHT-20), COLOR_WHITE, 2)
+        if last_score is not None and last_eval_result is not None:
+            cv2.rectangle(display_frame, (FRAME_WIDTH-450, FRAME_HEIGHT-230), (FRAME_WIDTH-20, FRAME_HEIGHT-20), COLOR_BLACK, -1)
+            cv2.rectangle(display_frame, (FRAME_WIDTH-450, FRAME_HEIGHT-230), (FRAME_WIDTH-20, FRAME_HEIGHT-20), COLOR_WHITE, 2)
             score_color = COLOR_STD if last_score >= 60 else COLOR_WARN
-            display_frame = put_chinese_text(display_frame, "📊 最近一次出拳", (FRAME_WIDTH-400, FRAME_HEIGHT-185), font_size=20)
-            display_frame = put_chinese_text(display_frame, f"动作：{current_action}", (FRAME_WIDTH-400, FRAME_HEIGHT-155), font_size=16, color=COLOR_LSTM)
-            display_frame = put_chinese_text(display_frame, f"总得分：{last_score:.1f}/80", (FRAME_WIDTH-400, FRAME_HEIGHT-125), font_size=24, color=score_color)
-            display_frame = put_chinese_text(display_frame, last_suggestion, (FRAME_WIDTH-400, FRAME_HEIGHT-85), font_size=16)
+            display_frame = put_chinese_text(display_frame, "📊 多维度评估", (FRAME_WIDTH-430, FRAME_HEIGHT-215), font_size=20)
+            display_frame = put_chinese_text(display_frame, f"动作：{current_action}", (FRAME_WIDTH-430, FRAME_HEIGHT-185), font_size=14, color=action_color)
+            display_frame = put_chinese_text(display_frame, f"总得分：{last_score:.1f}/100", (FRAME_WIDTH-430, FRAME_HEIGHT-155), font_size=24, color=score_color)
+            
+            # 显示各维度得分
+            dims = last_eval_result['dimensions']
+            dim_text = (f"肘:{dims['elbow_angle']['score']:.0f} 髋:{dims['hip_twist']['score']:.0f} "
+                       f"DTW:{dims['dtw_distance']['score']:.0f} 速:{dims['speed_match']['score']:.0f} "
+                       f"重:{dims['center_of_mass']['score']:.0f}")
+            display_frame = put_chinese_text(display_frame, dim_text, (FRAME_WIDTH-430, FRAME_HEIGHT-120), font_size=12)
+            
+            if 'last_suggestion' in locals():
+                display_frame = put_chinese_text(display_frame, last_suggestion, (FRAME_WIDTH-430, FRAME_HEIGHT-90), font_size=14)
 
-        # 4. 按键监听
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             print("\n✅ 训练结束！")
@@ -415,12 +475,48 @@ def main():
                 print(f"   总出拳次数：{len(score_history)}")
                 print(f"   平均得分：{np.mean(score_history):.1f}")
                 print(f"   最高得分：{np.max(score_history):.1f}")
+            
+            # 生成增强版报告
+            if len(enhanced_evaluator.evaluation_history) >= 3:
+                print("\n[生成] 正在生成增强版分析报告...")
+                enhanced_evaluator.print_enhanced_summary()
+                enhanced_evaluator.plot_dimension_trends(save_path=r"D:\boxing_ai_project\output\dimension_trends.png")
+                enhanced_evaluator.plot_action_comparison_heatmap(save_path=r"D:\boxing_ai_project\output\action_comparison_heatmap.png")
+                enhanced_evaluator.save_enhanced_report()
+                
+                # 为最近一次评估生成雷达图
+                if len(enhanced_evaluator.evaluation_history) > 0:
+                    last_eval = enhanced_evaluator.evaluation_history[-1]
+                    enhanced_evaluator.plot_radar_chart(last_eval, 
+                        save_path=r"D:\boxing_ai_project\output\radar_chart_last.png")
+                
+                # 同时生成错误分析报告
+                if len(error_analyzer.punch_history) >= 5:
+                    error_analyzer.print_summary()
+                    error_analyzer.plot_error_analysis()
+                    error_analyzer.plot_action_comparison()
+                    error_analyzer.save_report()
             break
+        
         if key == ord('\t'):
             skeleton_overlay_enabled = not skeleton_overlay_enabled
             print(f"📌 骨骼叠加：{'开启' if skeleton_overlay_enabled else '关闭'}")
+        
+        if key == ord('e'):
+            show_error_alert = not show_error_alert
+            print(f"📌 错误提醒：{'开启' if show_error_alert else '关闭'}")
+        
+        if key == ord('r'):
+            if len(enhanced_evaluator.evaluation_history) >= 3:
+                print("\n[生成] 正在生成分析报告...")
+                enhanced_evaluator.print_enhanced_summary()
+                enhanced_evaluator.plot_dimension_trends(save_path=r"D:\boxing_ai_project\output\dimension_trends.png")
+                enhanced_evaluator.plot_action_comparison_heatmap(save_path=r"D:\boxing_ai_project\output\action_comparison_heatmap.png")
+                enhanced_evaluator.save_enhanced_report()
+            else:
+                print("⚠️  数据不足，至少需要3次出拳才能生成报告")
 
-        cv2.imshow("🥊 拳击动作AI训练系统 (LSTM版)", display_frame)
+        cv2.imshow("🥊 拳击动作AI训练系统 (增强评估版)", display_frame)
 
     cap.release()
     cv2.destroyAllWindows()

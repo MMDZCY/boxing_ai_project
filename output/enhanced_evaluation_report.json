@@ -1,0 +1,566 @@
+{
+  "report_time": "2026-03-04T22:43:31.371832",
+  "total_punches": 20,
+  "evaluation_history": [
+    {
+      "timestamp": "2026-03-04T22:43:28.573053",
+      "action_type": 2,
+      "action_name": "勾拳(Hook)",
+      "total_score": 61.59074799734837,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 80.43910744855339,
+          "value": 136.74648266254076
+        },
+        "hip_twist": {
+          "score": 81.92388454084012,
+          "value": 24.577165362252035
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:28.573053",
+      "action_type": 3,
+      "action_name": "摆拳(Swing)",
+      "total_score": 59.532945116984614,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 75.4834107231154,
+          "value": 128.32179822929618
+        },
+        "hip_twist": {
+          "score": 78.64836974482307,
+          "value": 23.59451092344692
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:28.573053",
+      "action_type": 2,
+      "action_name": "勾拳(Hook)",
+      "total_score": 56.578022863318964,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 84.45922645384142,
+          "value": 143.58068497153042
+        },
+        "hip_twist": {
+          "score": 57.85286499943446,
+          "value": 17.355859499830338
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:28.574588",
+      "action_type": 0,
+      "action_name": "刺拳(Jab)",
+      "total_score": 67.33806513116812,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 99.22834837212405,
+          "value": 168.68819223261087
+        },
+        "hip_twist": {
+          "score": 86.12391215254847,
+          "value": 25.837173645764544
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:28.574588",
+      "action_type": 1,
+      "action_name": "直拳(Straight)",
+      "total_score": 60.16831024063016,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 85.99851599013859,
+          "value": 146.19747718323558
+        },
+        "hip_twist": {
+          "score": 70.67472497238208,
+          "value": 21.202417491714627
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:29.380152",
+      "action_type": 1,
+      "action_name": "直拳(Straight)",
+      "total_score": 57.187306390137216,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 80.16872234685133,
+          "value": 136.28682798964726
+        },
+        "hip_twist": {
+          "score": 64.58050321369754,
+          "value": 19.374150964109262
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:29.380152",
+      "action_type": 0,
+      "action_name": "刺拳(Jab)",
+      "total_score": 70.29400919915743,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 98.19745400305308,
+          "value": 166.93567180519025
+        },
+        "hip_twist": {
+          "score": 98.97858279357663,
+          "value": 29.69357483807299
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:29.380152",
+      "action_type": 0,
+      "action_name": "刺拳(Jab)",
+      "total_score": 54.50903223291328,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 70.07425441900266,
+          "value": 119.12623251230451
+        },
+        "hip_twist": {
+          "score": 63.96187451265045,
+          "value": 19.188562353795135
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:29.380152",
+      "action_type": 2,
+      "action_name": "勾拳(Hook)",
+      "total_score": 58.99425484753015,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 80.60161108630976,
+          "value": 137.02273884672658
+        },
+        "hip_twist": {
+          "score": 71.37540830381083,
+          "value": 21.41262249114325
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:29.380152",
+      "action_type": 3,
+      "action_name": "摆拳(Swing)",
+      "total_score": 50.19028299787678,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 79.08814292611112,
+          "value": 134.4498429743889
+        },
+        "hip_twist": {
+          "score": 37.67298906539601,
+          "value": 11.301896719618803
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:29.708696",
+      "action_type": 2,
+      "action_name": "勾拳(Hook)",
+      "total_score": 63.596007119708574,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 72.26767917804764,
+          "value": 122.85505460268098
+        },
+        "hip_twist": {
+          "score": 98.11634930078668,
+          "value": 29.434904790236004
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:29.708696",
+      "action_type": 3,
+      "action_name": "摆拳(Swing)",
+      "total_score": 59.91819595694634,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 80.49074066595428,
+          "value": 136.83425913212227
+        },
+        "hip_twist": {
+          "score": 75.1820431618311,
+          "value": 22.55461294854933
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:29.708696",
+      "action_type": 2,
+      "action_name": "勾拳(Hook)",
+      "total_score": 66.16517018133085,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 80.66068072532345,
+          "value": 137.12315723304985
+        },
+        "hip_twist": {
+          "score": 100.0,
+          "value": 31.563856356796034
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:29.710256",
+      "action_type": 1,
+      "action_name": "直拳(Straight)",
+      "total_score": 63.28043929089206,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 79.9977601461243,
+          "value": 135.99619224841132
+        },
+        "hip_twist": {
+          "score": 89.12399701744398,
+          "value": 26.737199105233195
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:29.710256",
+      "action_type": 0,
+      "action_name": "刺拳(Jab)",
+      "total_score": 55.76122969815308,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 78.68461891079392,
+          "value": 133.76385214834966
+        },
+        "hip_twist": {
+          "score": 60.36029988181843,
+          "value": 18.108089964545528
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:30.004525",
+      "action_type": 3,
+      "action_name": "摆拳(Swing)",
+      "total_score": 56.21996058458536,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 85.17502448760646,
+          "value": 144.797541628931
+        },
+        "hip_twist": {
+          "score": 55.70481785073499,
+          "value": 16.711445355220498
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:30.004525",
+      "action_type": 2,
+      "action_name": "勾拳(Hook)",
+      "total_score": 54.97613954220407,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 81.88406220090098,
+          "value": 139.20290574153168
+        },
+        "hip_twist": {
+          "score": 54.020495967915295,
+          "value": 16.206148790374588
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:30.004525",
+      "action_type": 1,
+      "action_name": "直拳(Straight)",
+      "total_score": 62.41612658548446,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 74.1313019359767,
+          "value": 126.02321329116037
+        },
+        "hip_twist": {
+          "score": 91.53320440596119,
+          "value": 27.459961321788356
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:30.004525",
+      "action_type": 1,
+      "action_name": "直拳(Straight)",
+      "total_score": 55.563458377614886,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 88.14411585833793,
+          "value": 149.84499695917447
+        },
+        "hip_twist": {
+          "score": 50.10971765212161,
+          "value": 15.032915295636482
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-04T22:43:30.004525",
+      "action_type": 0,
+      "action_name": "刺拳(Jab)",
+      "total_score": 62.99986764710495,
+      "dimensions": {
+        "elbow_angle": {
+          "score": 91.80999923525361,
+          "value": 156.07699869993115
+        },
+        "hip_twist": {
+          "score": 76.18947135316617,
+          "value": 22.85684140594985
+        },
+        "dtw_distance": {
+          "score": 0.0,
+          "value": 1.0
+        },
+        "speed_match": {
+          "score": 70.0,
+          "value": 0.7
+        },
+        "center_of_mass": {
+          "score": 70.0,
+          "value": 0.7
+        }
+      }
+    }
+  ]
+}
