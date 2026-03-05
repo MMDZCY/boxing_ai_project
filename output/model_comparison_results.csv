@@ -1,0 +1,6 @@
+﻿模型,测试准确率
+GRU,82.83%
+LSTM (Baseline),82.32%
+CNN-LSTM,78.28%
+Bi-LSTM,66.41%
+Transformer,60.35%
